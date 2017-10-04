@@ -12,8 +12,9 @@
 #define MAGICSIGN "DeerDB"
 #define DELETESIGN "D0xD"
 
-const int MAX_FILE_SIZE = 1024;
+const int MAX_FILE_SIZE = 100;
 const std::string DB_FILE_PREV = "kvlog.deer.";
+const std::string DB_HINT_PREV = "hint.deer.";
 
 struct BitCaskData {
     bool is_valid;
@@ -35,6 +36,30 @@ struct BitCaskIndex {
 
     int data_size;
     long data_pos;
+};
+
+struct BitCaskHint {
+    time_t timestamp;
+
+    std::string key;
+
+    int data_size;
+    long data_pos;
+
+    friend std::istream& operator>>(std::istream& is, BitCaskHint& hint){
+        is >> hint.timestamp;
+        is >> hint.key;
+        is >> hint.data_size;
+        is >> hint.data_pos;
+        return is;
+    }
+    friend std::ostream& operator<<(std::ostream& os, const BitCaskHint& hint){
+        os << hint.timestamp << " " 
+           << hint.key << " " 
+           << hint.data_size << " " 
+           << hint.data_pos;
+        return os;
+    }
 };
 
 
@@ -63,15 +88,20 @@ private:
 
     void init_bitcask_data(BitCaskData &kv, std::string key, std::string value);
     void init_bitcask_index(BitCaskData &kv, BitCaskIndex &index, long kv_pos);
+    void init_bitcask_hint(BitCaskData &kv, BitCaskHint &hint, long kv_pos);
     long insert_into_kvlog(BitCaskData &kv);
-    void insert_into_index(std::string key, BitCaskIndex &index);
+    void insert_into_hint();
+    void insert_into_index(std::string key, BitCaskIndex &index, BitCaskHint &hint);
     void delete_index(std::string key);
 
     const std::string get_file_name(int file_index);
+    const std::string get_hint_name(int file_index);
 
 private:
     Error error;
+
     std::unordered_map<std::string, BitCaskIndex> _index;
+    std::unordered_map<std::string, BitCaskHint> _curr_hint;
 
     int _curr_file_index;
 };
