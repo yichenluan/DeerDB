@@ -12,7 +12,7 @@
 #define MAGICSIGN "DeerDB"
 #define DELETESIGN "D0xD"
 
-const int MAX_FILE_SIZE = 100;
+const int MAX_FILE_SIZE = 200;
 const std::string DB_FILE_PREV = "kvlog.deer.";
 const std::string DB_HINT_PREV = "hint.deer.";
 
@@ -69,7 +69,7 @@ class BitCask
 public:
     
     BitCask();
-    //~BitCask();
+    ~BitCask();
 
     bool do_get(std::string key);
     bool do_insert(std::string key, std::string value);
@@ -80,7 +80,7 @@ public:
 
 private:
     void init();
-    void init_with_hint(std::ifstream &hint);
+    void init_with_hint(std::ifstream &hint_fd);
     void init_without_hint();
 
     void init_new_kvlog(std::fstream &kvlog);
@@ -96,6 +96,8 @@ private:
 
     const std::string get_file_name(int file_index);
     const std::string get_hint_name(int file_index);
+
+    void hint_to_index(BitCaskIndex &index, BitCaskHint &hint);
 
 private:
     Error error;

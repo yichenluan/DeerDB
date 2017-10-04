@@ -12,16 +12,27 @@ BitCask::BitCask() {
     init();
 }
 
-//BitCask::~BitCask() {
-    ////TODO
+BitCask::~BitCask() {
+    insert_into_hint();
+}
+
+//void BitCask:: init() {
+    //std::ifstream hint;
+    //hint.open("hint.bin", std::ios::binary);
+    //if (hint) {
+        //init_with_hint(hint);
+        //hint.close();
+    //}
+    //else {
+        //init_without_hint();
+    //}
 //}
 
-void BitCask:: init() {
-    std::ifstream hint;
-    hint.open("hint.bin", std::ios::binary);
-    if (hint) {
-        init_with_hint(hint);
-        hint.close();
+void BitCask::init(){
+    std::ifstream hint_fd(get_hint_name(_curr_file_index));
+    if(hint_fd){
+        init_with_hint(hint_fd);
+        hint_fd.close();
     }
     else {
         init_without_hint();
@@ -108,8 +119,26 @@ void BitCask::get_error() {
     //TODO
 }
 
-void BitCask::init_with_hint(std::ifstream &hint){
-
+void BitCask::init_with_hint(std::ifstream &hint_fd){
+    BitCaskHint hint;
+    while(hint_fd){
+        while(hint_fd >> hint){
+            BitCaskIndex index;
+            hint_to_index(index, hint);
+            auto it = _index.find(hint.key);
+            if(it == _index.end()){
+                _index[hint.key] = index;
+            }
+            else{
+                _index[hint.key] = (it->second.timestamp > index.timestamp) ? 
+                    it->second: 
+                    index;
+            }
+        }
+        hint_fd.close();
+        _curr_file_index += 1;
+        hint_fd.open(get_hint_name(_curr_file_index));
+    }
 }
 
 void BitCask::init_without_hint() {
@@ -152,7 +181,7 @@ void BitCask::init_bitcask_data(BitCaskData &kv, std::string key, std::string va
 }
 
 void BitCask::init_bitcask_index(BitCaskData &kv, BitCaskIndex &index, long kv_pos) {
-    index.timestamp = time(0);
+    index.timestamp = kv.timestamp;
     index.data_size = static_cast<int>(sizeof(kv));
     index.data_pos = kv_pos;
     index.file_index = _curr_file_index;
@@ -160,7 +189,7 @@ void BitCask::init_bitcask_index(BitCaskData &kv, BitCaskIndex &index, long kv_p
 }
 
 void BitCask::init_bitcask_hint(BitCaskData &kv, BitCaskHint &hint, long kv_pos) {
-    hint.timestamp = time(0);
+    hint.timestamp = kv.timestamp;
     hint.key = kv.key;
     hint.data_size = static_cast<int>(sizeof(kv));
     hint.data_pos = kv_pos;
@@ -240,8 +269,16 @@ const std::string BitCask::get_file_name(int file_index) {
 }
 
 const std::string BitCask::get_hint_name(int file_index) {
-    const std::string hint_name = DB_FILE_PATH 
+    const std::string hint_name = DB_HINT_PATH 
                                 + DB_HINT_PREV 
                                 + std::to_string(file_index);
     return hint_name;
+}
+
+void BitCask::hint_to_index(BitCaskIndex &index, BitCaskHint &hint){
+    index.timestamp = hint.timestamp;
+    index.file_index = _curr_file_index;
+    index.data_size = hint.data_size;
+    index.data_pos = hint.data_pos;
+    return;
 }
