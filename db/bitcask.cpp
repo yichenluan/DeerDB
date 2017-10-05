@@ -16,18 +16,6 @@ BitCask::~BitCask() {
     insert_into_hint();
 }
 
-//void BitCask:: init() {
-    //std::ifstream hint;
-    //hint.open("hint.bin", std::ios::binary);
-    //if (hint) {
-        //init_with_hint(hint);
-        //hint.close();
-    //}
-    //else {
-        //init_without_hint();
-    //}
-//}
-
 void BitCask::init(){
     std::ifstream hint_fd(get_hint_name(_curr_file_index));
     if(hint_fd){
@@ -122,9 +110,14 @@ void BitCask::get_error() {
 void BitCask::init_with_hint(std::ifstream &hint_fd){
     BitCaskHint hint;
     while(hint_fd){
+        _curr_hint.clear();
+
         while(hint_fd >> hint){
+            _curr_hint[hint.key] = hint;
+
             BitCaskIndex index;
             hint_to_index(index, hint);
+
             auto it = _index.find(hint.key);
             if(it == _index.end()){
                 _index[hint.key] = index;
@@ -139,6 +132,7 @@ void BitCask::init_with_hint(std::ifstream &hint_fd){
         _curr_file_index += 1;
         hint_fd.open(get_hint_name(_curr_file_index));
     }
+    _curr_file_index -= 1;
 }
 
 void BitCask::init_without_hint() {
@@ -227,7 +221,7 @@ void BitCask::insert_into_hint() {
     std::fstream hint_fd;
     hint_fd.open(
             get_hint_name(_curr_file_index), 
-            std::ios::app | std::ios::in
+            std::ios::trunc | std::ios::out
         );
     if(!hint_fd){
         return ;
